@@ -1,97 +1,356 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# TaskFlow 📱
 
-# Getting Started
+TaskFlow is a **React Native task management application** that helps users create, manage, prioritize, and complete tasks with deadline notifications.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+The application uses **Firebase Authentication and Firestore** for user authentication and real-time task management, while **Node.js, Express, and MongoDB** provide backend task storage.
 
-## Step 1: Start Metro
+## 🚀 Features
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+* 🔐 User Registration and Login
+* 🔥 Firebase Authentication
+* ☁️ Firestore real-time task storage
+* 🍃 MongoDB backend storage
+* ➕ Create tasks
+* ✏️ Update task status
+* ✅ Mark tasks as completed
+* 🗑️ Delete tasks
+* 📅 Select task date and time
+* ⏰ Set task deadlines
+* 🔔 Deadline notifications
+* 🎯 Task priorities:
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+  * Low
+  * Medium
+  * High
+* 📊 Pending, Completed, and Total task summary
+* 👤 User-specific tasks
+* 🚪 Secure logout
+* 📱 Android mobile application
 
-```sh
-# Using npm
+## 🛠️ Technologies Used
+
+### Frontend
+
+* React Native
+* TypeScript
+* React Navigation
+* React Native Firebase
+* React Native DateTimePicker
+
+### Backend
+
+* Node.js
+* Express.js
+* Mongoose
+* MongoDB Atlas
+* CORS
+* dotenv
+
+### Database & Authentication
+
+* Firebase Authentication
+* Firebase Firestore
+* MongoDB Atlas
+
+## 📂 Project Structure
+
+```text
+TaskFlow/
+│
+├── android/
+├── ios/
+│
+├── src/
+│   ├── context/
+│   │   └── TaskContext.tsx
+│   │
+│   ├── screens/
+│   │   ├── LoginScreen.tsx
+│   │   ├── RegistrationScreen.tsx
+│   │   ├── HomeScreen.tsx
+│   │   ├── AddTaskScreen.tsx
+│   │   └── TaskDetailsScreen.tsx
+│   │
+│   ├── styles/
+│   │
+│   └── utils/
+│       └── notificationService.ts
+│
+├── backend/
+│   ├── models/
+│   │   └── Task.js
+│   │
+│   ├── routes/
+│   │   └── taskRoutes.js
+│   │
+│   ├── server.js
+│   ├── package.json
+│   └── .env
+│
+├── App.tsx
+├── package.json
+└── README.md
+```
+
+## 🔄 Application Flow
+
+```text
+User
+ │
+ ▼
+Firebase Authentication
+ │
+ ▼
+TaskFlow React Native App
+ │
+ ▼
+TaskContext
+ │
+ ├──────────────► Firebase Firestore
+ │                 └── User-specific tasks
+ │
+ └──────────────► Node.js / Express API
+                       │
+                       ▼
+                    MongoDB
+```
+
+## 🔥 Firestore Structure
+
+Tasks are stored separately for each authenticated user:
+
+```text
+users
+ └── {userId}
+      └── tasks
+           ├── {taskId}
+           ├── {taskId}
+           └── {taskId}
+```
+
+This ensures that users see only their own Firestore tasks.
+
+## 🍃 MongoDB Structure
+
+MongoDB stores a copy of each task with the Firebase user ID:
+
+```text
+Task
+ ├── userId
+ ├── firestoreId
+ ├── title
+ ├── description
+ ├── dateTime
+ ├── deadline
+ ├── priority
+ ├── completed
+ ├── createdAt
+ └── updatedAt
+```
+
+The `userId` connects the MongoDB task with the authenticated Firebase user.
+
+## 🔌 Backend API
+
+The Express backend runs on port `5000`.
+
+### Test API
+
+```http
+GET /
+```
+
+Response:
+
+```json
+{
+  "message": "TaskFlow API is running"
+}
+```
+
+### Create Task
+
+```http
+POST /api/tasks
+```
+
+### Get User Tasks
+
+```http
+GET /api/tasks/user/:userId
+```
+
+### Update Task
+
+```http
+PUT /api/tasks/firestore/:firestoreId
+```
+
+### Delete Task
+
+```http
+DELETE /api/tasks/firestore/:firestoreId
+```
+
+## ⚙️ Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/preetibidarageri/TaskFlow.git
+```
+
+Go to the project:
+
+```bash
+cd TaskFlow
+```
+
+Install frontend dependencies:
+
+```bash
+npm install
+```
+
+Install backend dependencies:
+
+```bash
+cd backend
+npm install
+```
+
+## 🔐 Environment Variables
+
+Create:
+
+```text
+backend/.env
+```
+
+Add:
+
+```env
+PORT=5000
+MONGO_URI=your_mongodb_connection_string
+```
+
+**Do not commit `.env` to GitHub.**
+
+The `.gitignore` file already excludes environment files.
+
+## ▶️ Running the Application
+
+### Start Backend
+
+Open Terminal 1:
+
+```bash
+cd ~/Projects/TaskFlow/backend
+npm run dev
+```
+
+Expected output:
+
+```text
+MongoDB connected successfully
+Server running on http://localhost:5000
+```
+
+### Start Metro
+
+Open Terminal 2:
+
+```bash
+cd ~/Projects/TaskFlow
 npm start
-
-# OR using Yarn
-yarn start
 ```
 
-## Step 2: Build and run your app
+### Run Android
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+Open Terminal 3:
 
-### Android
-
-```sh
-# Using npm
+```bash
+cd ~/Projects/TaskFlow
 npm run android
-
-# OR using Yarn
-yarn android
 ```
 
-### iOS
+## 📱 Mobile Development
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+When running the application on a physical Android device, the phone must be able to access the laptop running the backend.
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+For local development, update the API URL in:
 
-```sh
-bundle install
+```text
+src/context/TaskContext.tsx
 ```
 
-Then, and every time you update your native dependencies, run:
+Example:
 
-```sh
-bundle exec pod install
+```ts
+const API_URL = 'http://192.168.0.115:5000';
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+Replace the IP address if your laptop gets a new IP address after connecting to another Wi-Fi network.
 
-```sh
-# Using npm
-npm run ios
+## 🧪 Testing
 
-# OR using Yarn
-yarn ios
+The application can be tested by:
+
+1. Registering a new user.
+2. Logging in.
+3. Creating a task.
+4. Checking that the task appears in Firestore.
+5. Checking that the task appears in MongoDB.
+6. Marking the task as completed.
+7. Checking the updated `completed` value in both databases.
+8. Deleting the task.
+9. Confirming that it is removed from both databases.
+10. Creating another Firebase user and verifying that users see only their own tasks.
+
+## 🔒 Security
+
+The project uses Firebase Authentication to identify users.
+
+Each task contains:
+
+```text
+userId
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+which identifies the Firebase authenticated user.
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+Firestore stores tasks under:
 
-## Step 3: Modify your app
+```text
+users/{userId}/tasks
+```
 
-Now that you have successfully run the app, let's make changes!
+MongoDB also stores the same Firebase `userId`.
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+For production deployment, authentication and authorization should also be enforced on the backend API rather than trusting a client-supplied `userId`.
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+## 📌 Future Improvements
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+* Backend Firebase token verification
+* JWT/API authentication
+* Task editing screen
+* Search tasks
+* Filter by priority
+* Sort by deadline
+* Cloud deployment
+* Production MongoDB configuration
+* Backend authorization
+* Task categories
+* Recurring tasks
 
-## Congratulations! :tada:
+## 👩‍💻 Author
 
-You've successfully run and modified your React Native App. :partying_face:
+**Preeti D Bidarageri**
 
-### Now what?
+GitHub:
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+https://github.com/preetibidarageri
 
-# Troubleshooting
+## 📄 License
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+This project is created for learning and portfolio purposes.
