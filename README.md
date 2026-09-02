@@ -1,31 +1,45 @@
-# TaskFlow 📱
+# 📱 TaskFlow – Task Management App
 
-TaskFlow is a **React Native task management application** that helps users create, manage, prioritize, and complete tasks with deadline notifications.
+TaskFlow is a mobile task management application built with **React Native**. It allows users to create, manage, complete, and delete their personal tasks.
 
-The application uses **Firebase Authentication and Firestore** for user authentication and real-time task management, while **Node.js, Express, and MongoDB** provide backend task storage.
+The application uses **Firebase Authentication and Firestore** for user authentication and cloud task storage, while **MongoDB Atlas** provides backend database storage through a Node.js/Express API deployed on Render.
 
-## 🚀 Features
+## 🚀 Live Backend
 
-* 🔐 User Registration and Login
-* 🔥 Firebase Authentication
-* ☁️ Firestore real-time task storage
-* 🍃 MongoDB backend storage
-* ➕ Create tasks
-* ✏️ Update task status
-* ✅ Mark tasks as completed
-* 🗑️ Delete tasks
-* 📅 Select task date and time
-* ⏰ Set task deadlines
-* 🔔 Deadline notifications
-* 🎯 Task priorities:
+**Backend API:**
+https://taskflow-g0qv.onrender.com
+
+The backend is deployed on **Render** and connected to **MongoDB Atlas**.
+
+## 📥 APK / Demo
+
+Download and install the TaskFlow Android APK:
+
+**[Download TaskFlow APK / Demo](https://drive.google.com/file/d/1Zqt_U06O6_kXJwp9eDNQ2bduiQ0T5H4I/view?usp=drivesdk)**
+
+> Android device required to install the APK.
+
+## ✨ Features
+
+* 🔐 User Registration
+* 🔑 User Login
+* 👤 Firebase Authentication
+* ➕ Create Tasks
+* 📝 Task Description
+* 📅 Date and Time
+* ⏰ Deadline
+* 🚦 Task Priority
 
   * Low
   * Medium
   * High
-* 📊 Pending, Completed, and Total task summary
+* ✅ Mark tasks as completed
+* 🗑️ Delete tasks
 * 👤 User-specific tasks
-* 🚪 Secure logout
-* 📱 Android mobile application
+* ☁️ Firestore cloud storage
+* 🍃 MongoDB Atlas database
+* 🌐 REST API using Node.js and Express
+* 🚀 Backend deployed on Render
 
 ## 🛠️ Technologies Used
 
@@ -33,18 +47,14 @@ The application uses **Firebase Authentication and Firestore** for user authenti
 
 * React Native
 * TypeScript
-* React Navigation
-* React Native Firebase
-* React Native DateTimePicker
+* JavaScript
 
 ### Backend
 
 * Node.js
 * Express.js
+* REST API
 * Mongoose
-* MongoDB Atlas
-* CORS
-* dotenv
 
 ### Database & Authentication
 
@@ -52,120 +62,131 @@ The application uses **Firebase Authentication and Firestore** for user authenti
 * Firebase Firestore
 * MongoDB Atlas
 
+### Deployment
+
+* Render
+* GitHub
+
+## 🏗️ Application Architecture
+
+```text
+                ┌─────────────────────┐
+                │   React Native APK  │
+                │      TaskFlow       │
+                └──────────┬──────────┘
+                           │
+              ┌────────────┴────────────┐
+              │                         │
+              ▼                         ▼
+     ┌─────────────────┐       ┌─────────────────┐
+     │ Firebase Auth   │       │   Firestore     │
+     │                 │       │                 │
+     │ User Login      │       │ User Tasks      │
+     │ Registration    │       │ Cloud Storage   │
+     └─────────────────┘       └─────────────────┘
+                                     
+                           │
+                           ▼
+                 ┌─────────────────────┐
+                 │   Render Backend    │
+                 │ Node.js + Express   │
+                 └──────────┬──────────┘
+                            │
+                            ▼
+                 ┌─────────────────────┐
+                 │    MongoDB Atlas    │
+                 │                     │
+                 │      Tasks DB       │
+                 └─────────────────────┘
+```
+
 ## 📂 Project Structure
 
 ```text
 TaskFlow/
 │
 ├── android/
-├── ios/
 │
 ├── src/
+│   ├── components/
 │   ├── context/
 │   │   └── TaskContext.tsx
-│   │
 │   ├── screens/
-│   │   ├── LoginScreen.tsx
-│   │   ├── RegistrationScreen.tsx
-│   │   ├── HomeScreen.tsx
-│   │   ├── AddTaskScreen.tsx
-│   │   └── TaskDetailsScreen.tsx
-│   │
-│   ├── styles/
-│   │
-│   └── utils/
-│       └── notificationService.ts
+│   └── ...
 │
 ├── backend/
 │   ├── models/
 │   │   └── Task.js
-│   │
 │   ├── routes/
 │   │   └── taskRoutes.js
-│   │
 │   ├── server.js
 │   ├── package.json
 │   └── .env
 │
-├── App.tsx
 ├── package.json
 └── README.md
 ```
 
-## 🔄 Application Flow
+## 🔥 Firebase Structure
+
+Tasks are stored under each authenticated user's UID:
 
 ```text
-User
- │
- ▼
-Firebase Authentication
- │
- ▼
-TaskFlow React Native App
- │
- ▼
-TaskContext
- │
- ├──────────────► Firebase Firestore
- │                 └── User-specific tasks
- │
- └──────────────► Node.js / Express API
-                       │
-                       ▼
-                    MongoDB
+users/
+   └── {userId}/
+        └── tasks/
+             └── {taskId}
 ```
 
-## 🔥 Firestore Structure
-
-Tasks are stored separately for each authenticated user:
-
-```text
-users
- └── {userId}
-      └── tasks
-           ├── {taskId}
-           ├── {taskId}
-           └── {taskId}
-```
-
-This ensures that users see only their own Firestore tasks.
+This ensures that each user can access their own tasks.
 
 ## 🍃 MongoDB Structure
 
-MongoDB stores a copy of each task with the Firebase user ID:
+Each task stored in MongoDB contains information such as:
 
 ```text
-Task
- ├── userId
- ├── firestoreId
- ├── title
- ├── description
- ├── dateTime
- ├── deadline
- ├── priority
- ├── completed
- ├── createdAt
- └── updatedAt
+userId
+firestoreId
+title
+description
+dateTime
+deadline
+priority
+completed
+createdAt
+updatedAt
 ```
 
-The `userId` connects the MongoDB task with the authenticated Firebase user.
+The `userId` connects the task to the Firebase authenticated user, while `firestoreId` links the MongoDB record with its corresponding Firestore task.
 
-## 🔌 Backend API
+## 🔄 Task Saving Flow
 
-The Express backend runs on port `5000`.
+When a user creates a task:
 
-### Test API
+```text
+User creates task
+       ↓
+Firebase Firestore
+       ↓
+Firestore task created
+       ↓
+Render REST API
+       ↓
+Node.js + Express
+       ↓
+MongoDB Atlas
+       ↓
+Task successfully stored
+```
+
+If the MongoDB request fails after Firestore creation, the application removes the Firestore task to prevent inconsistent data.
+
+## 🌐 API Endpoints
+
+### Get User Tasks
 
 ```http
-GET /
-```
-
-Response:
-
-```json
-{
-  "message": "TaskFlow API is running"
-}
+GET /api/tasks/user/:userId
 ```
 
 ### Create Task
@@ -174,13 +195,13 @@ Response:
 POST /api/tasks
 ```
 
-### Get User Tasks
+### Update Task
 
 ```http
-GET /api/tasks/user/:userId
+PUT /api/tasks/:id
 ```
 
-### Update Task
+### Update Task Using Firestore ID
 
 ```http
 PUT /api/tasks/firestore/:firestoreId
@@ -189,10 +210,16 @@ PUT /api/tasks/firestore/:firestoreId
 ### Delete Task
 
 ```http
+DELETE /api/tasks/:id
+```
+
+### Delete Task Using Firestore ID
+
+```http
 DELETE /api/tasks/firestore/:firestoreId
 ```
 
-## ⚙️ Installation
+## ⚙️ Local Backend Setup
 
 Clone the repository:
 
@@ -200,7 +227,7 @@ Clone the repository:
 git clone https://github.com/preetibidarageri/TaskFlow.git
 ```
 
-Go to the project:
+Go into the project:
 
 ```bash
 cd TaskFlow
@@ -212,145 +239,104 @@ Install frontend dependencies:
 npm install
 ```
 
-Install backend dependencies:
+Go to the backend:
 
 ```bash
 cd backend
 npm install
 ```
 
-## 🔐 Environment Variables
-
-Create:
-
-```text
-backend/.env
-```
-
-Add:
+Create a `.env` file:
 
 ```env
 PORT=5000
 MONGO_URI=your_mongodb_connection_string
 ```
 
-**Do not commit `.env` to GitHub.**
-
-The `.gitignore` file already excludes environment files.
-
-## ▶️ Running the Application
-
-### Start Backend
-
-Open Terminal 1:
+Start the backend:
 
 ```bash
-cd ~/Projects/TaskFlow/backend
-npm run dev
-```
-
-Expected output:
-
-```text
-MongoDB connected successfully
-Server running on http://localhost:5000
-```
-
-### Start Metro
-
-Open Terminal 2:
-
-```bash
-cd ~/Projects/TaskFlow
 npm start
 ```
 
-### Run Android
-
-Open Terminal 3:
+For development:
 
 ```bash
-cd ~/Projects/TaskFlow
-npm run android
+npm run dev
 ```
 
-## 📱 Mobile Development
+## 📱 Running the Mobile App
 
-When running the application on a physical Android device, the phone must be able to access the laptop running the backend.
+From the project root:
 
-For local development, update the API URL in:
+```bash
+npm start
+```
+
+For Android development:
+
+```bash
+npx react-native run-android
+```
+
+For a release APK:
+
+```bash
+cd android
+./gradlew assembleRelease
+```
+
+The APK will be generated at:
 
 ```text
-src/context/TaskContext.tsx
+android/app/build/outputs/apk/release/app-release.apk
 ```
-
-Example:
-
-```ts
-const API_URL = 'http://192.168.0.115:5000';
-```
-
-Replace the IP address if your laptop gets a new IP address after connecting to another Wi-Fi network.
-
-## 🧪 Testing
-
-The application can be tested by:
-
-1. Registering a new user.
-2. Logging in.
-3. Creating a task.
-4. Checking that the task appears in Firestore.
-5. Checking that the task appears in MongoDB.
-6. Marking the task as completed.
-7. Checking the updated `completed` value in both databases.
-8. Deleting the task.
-9. Confirming that it is removed from both databases.
-10. Creating another Firebase user and verifying that users see only their own tasks.
 
 ## 🔒 Security
 
-The project uses Firebase Authentication to identify users.
+Sensitive configuration such as MongoDB credentials should be stored in environment variables.
 
-Each task contains:
-
-```text
-userId
-```
-
-which identifies the Firebase authenticated user.
-
-Firestore stores tasks under:
+The `.env` file should **not** be committed to GitHub.
 
 ```text
-users/{userId}/tasks
+.env
+backend/.env
 ```
 
-MongoDB also stores the same Firebase `userId`.
+are included in `.gitignore`.
 
-For production deployment, authentication and authorization should also be enforced on the backend API rather than trusting a client-supplied `userId`.
+## 📌 Deployment
 
-## 📌 Future Improvements
+The backend is deployed using:
 
-* Backend Firebase token verification
-* JWT/API authentication
-* Task editing screen
-* Search tasks
-* Filter by priority
-* Sort by deadline
-* Cloud deployment
-* Production MongoDB configuration
-* Backend authorization
-* Task categories
-* Recurring tasks
+* **GitHub** – Source code repository
+* **Render** – Node.js/Express backend hosting
+* **MongoDB Atlas** – Cloud database
+* **Firebase** – Authentication and Firestore
+
+The deployed backend is available at:
+
+```text
+https://taskflow-g0qv.onrender.com
+```
 
 ## 👩‍💻 Author
 
 **Preeti D Bidarageri**
 
-GitHub:
+BE – Computer Science Engineering
 
-https://github.com/preetibidarageri
+## ⭐ Future Improvements
 
-## 📄 License
+* 🔔 Push notifications
+* 📊 Task statistics
+* 🔎 Task search and filtering
+* 📆 Calendar view
+* 🔄 Better offline synchronization
+* 🌙 Dark mode
+* 👥 Task sharing
+* ⏰ Reminder notifications
 
-This project is created for learning and portfolio purposes.
+---
+
+⭐ If you like this project, consider giving the repository a star!
