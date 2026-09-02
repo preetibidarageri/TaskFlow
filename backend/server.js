@@ -42,7 +42,7 @@ mongoose
 
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📱 Mobile API: http://172.16.2.95:${PORT}`);
+      console.log(`🌐 TaskFlow API is running`);
     });
   })
   .catch(error => {
