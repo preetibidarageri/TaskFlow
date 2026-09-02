@@ -163,7 +163,6 @@ export default function AddTaskScreen({ navigation }: AddTaskScreenProps) {
 
     if (!title.trim()) {
       setErrorModal('Missing Title', 'Please enter a task title.');
-
       return;
     }
 
@@ -175,7 +174,6 @@ export default function AddTaskScreen({ navigation }: AddTaskScreenProps) {
 
     if (!currentUser) {
       setErrorModal('Not Logged In', 'Please login before adding a task.');
-
       return;
     }
 
@@ -209,7 +207,6 @@ export default function AddTaskScreen({ navigation }: AddTaskScreenProps) {
         'Invalid Deadline',
         'Deadline must be after the task date and time.',
       );
-
       return;
     }
 
@@ -219,60 +216,84 @@ export default function AddTaskScreen({ navigation }: AddTaskScreenProps) {
 
     if (completeDeadline <= new Date()) {
       setErrorModal('Invalid Deadline', 'Please select a future deadline.');
-
       return;
     }
 
-    try {
-      setLoading(true);
+    // -------------------------
+    // START LOADING
+    // -------------------------
 
-      // -------------------------
-      // SAVE TASK TO FIRESTORE
-      // -------------------------
+    setLoading(true);
+
+    try {
+      // ==================================================
+      // 1. SAVE TASK
+      // ==================================================
+
+      console.log('==============================');
+      console.log('STARTING TASK SAVE');
+      console.log('==============================');
 
       const taskId = await addTask({
         userId: currentUser.uid,
-
         title: title.trim(),
-
         description: description.trim(),
-
         dateTime: taskDateTime.toISOString(),
-
         deadline: completeDeadline.toISOString(),
-
         priority,
       });
 
-      // -------------------------
-      // SCHEDULE NOTIFICATION
-      // -------------------------
+      console.log('TASK SAVED SUCCESSFULLY');
+      console.log('Firestore ID:', taskId);
 
-      await scheduleDeadlineNotification(
-        taskId,
-        title.trim(),
-        completeDeadline.toISOString(),
-      );
+      // ==================================================
+      // 2. SCHEDULE NOTIFICATION
+      // ==================================================
+
+      // Notification failure should NOT mean
+      // task saving failed.
+      try {
+        console.log('Scheduling deadline notification...');
+
+        await scheduleDeadlineNotification(
+          taskId,
+          title.trim(),
+          completeDeadline.toISOString(),
+        );
+
+        console.log('Notification scheduled successfully');
+      } catch (notificationError) {
+        console.log('Notification scheduling failed:', notificationError);
+
+        // We DON'T throw here.
+        // The task is already saved.
+      }
+
+      // ==================================================
+      // 3. TASK SAVE SUCCESS
+      // ==================================================
 
       setLoading(false);
-
-      // -------------------------
-      // SHOW SUCCESS MODAL
-      // -------------------------
 
       setSuccessModalVisible(true);
     } catch (error) {
+      // ==================================================
+      // TASK SAVE FAILED
+      // ==================================================
+
       setLoading(false);
 
-      console.log('Add task error:', error);
+      console.log('================================');
+      console.log('TASK SAVE FAILED');
+      console.log('================================');
+      console.log('Error:', error);
 
       setErrorModal(
         'Unable to Save Task',
-        'Something went wrong while saving your task. Please try again.',
+        'Something went wrong while saving your task. Please check your connection and try again.',
       );
     }
   }
-
   // =========================
   // ERROR MODAL
   // =========================

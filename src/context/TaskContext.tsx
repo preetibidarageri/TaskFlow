@@ -6,11 +6,9 @@ import {
   getFirestore,
   collection,
   addDoc,
-  query,
-  onSnapshot,
+  doc,
   updateDoc,
   deleteDoc,
-  doc,
 } from '@react-native-firebase/firestore';
 
 import {
@@ -22,7 +20,7 @@ import {
 // MONGODB BACKEND URL
 // ======================================================
 
-const API_URL = 'http://192.168.0.115:5000';
+const API_URL = 'http://127.0.0.1:5000';
 
 // ======================================================
 // TYPES
@@ -32,6 +30,7 @@ export type Priority = 'Low' | 'Medium' | 'High';
 
 export type Task = {
   id: string;
+  firestoreId: string;
   userId: string;
   title: string;
   description: string;
@@ -41,7 +40,7 @@ export type Task = {
   completed: boolean;
 };
 
-type NewTask = Omit<Task, 'id' | 'completed'>;
+type NewTask = Omit<Task, 'id' | 'firestoreId' | 'completed'>;
 
 // ======================================================
 // CONTEXT TYPE
@@ -71,103 +70,81 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
 
   // ====================================================
-  // FIRESTORE REAL-TIME LISTENER
+  // LOAD TASKS FROM MONGODB
   // ====================================================
 
   useEffect(() => {
     const auth = getAuth();
-    const firestore = getFirestore();
 
-    let unsubscribeTasks: (() => void) | undefined;
-
-    const unsubscribeAuth = auth.onAuthStateChanged(user => {
-      // ------------------------------------------------
-      // REMOVE OLD LISTENER
-      // ------------------------------------------------
-
-      if (unsubscribeTasks) {
-        unsubscribeTasks();
-        unsubscribeTasks = undefined;
-      }
-
-      // ------------------------------------------------
-      // NO USER
-      // ------------------------------------------------
-
+    const unsubscribeAuth = auth.onAuthStateChanged(async user => {
       if (!user) {
+        console.log('No logged-in user');
         setTasks([]);
         return;
       }
 
       console.log('Logged in user:', user.uid);
 
-      // ------------------------------------------------
-      // USER-SPECIFIC FIRESTORE COLLECTION
-      // ------------------------------------------------
+      try {
+        console.log('Loading tasks from MongoDB...');
 
-      const tasksCollection = collection(firestore, 'users', user.uid, 'tasks');
+        const response = await fetch(
+          `${API_URL}/api/tasks/user/${encodeURIComponent(user.uid)}`,
+        );
 
-      const tasksQuery = query(tasksCollection);
+        const data = await response.json();
 
-      // ------------------------------------------------
-      // REAL-TIME LISTENER
-      // ------------------------------------------------
+        console.log('MongoDB tasks response:', data);
 
-      unsubscribeTasks = onSnapshot(
-        tasksQuery,
-        snapshot => {
-          const taskList: Task[] = snapshot.docs.map(document => {
-            const data = document.data();
+        if (!response.ok) {
+          throw new Error(data.message || 'Failed to load tasks from MongoDB');
+        }
 
-            return {
-              id: document.id,
+        const mongoTasks = data.tasks || [];
 
-              userId: data.userId || user.uid,
+        const taskList: Task[] = mongoTasks.map((item: any) => ({
+          id: item._id,
 
-              title: data.title || '',
+          firestoreId: item.firestoreId || '',
 
-              description: data.description || '',
+          userId: item.userId || user.uid,
 
-              dateTime: data.dateTime || '',
+          title: item.title || '',
 
-              deadline: data.deadline || '',
+          description: item.description || '',
 
-              priority: data.priority || 'Medium',
+          dateTime: item.dateTime || '',
 
-              completed: data.completed ?? false,
-            };
-          });
+          deadline: item.deadline || '',
 
-          console.log(`Firestore tasks for ${user.uid}:`, taskList.length);
+          priority: item.priority || 'Medium',
 
-          setTasks(taskList);
-        },
+          completed: item.completed ?? false,
+        }));
 
-        error => {
-          console.log('Firestore tasks error:', error);
-        },
-      );
+        console.log(`MongoDB tasks for ${user.uid}:`, taskList.length);
+
+        setTasks(taskList);
+      } catch (error) {
+        console.log('Load MongoDB tasks error:', error);
+
+        setTasks([]);
+      }
     });
-
-    // ------------------------------------------------
-    // CLEANUP
-    // ------------------------------------------------
 
     return () => {
       unsubscribeAuth();
-
-      if (unsubscribeTasks) {
-        unsubscribeTasks();
-      }
     };
   }, []);
 
   // ====================================================
   // ADD TASK
+  // FIRESTORE -> MONGODB
   // ====================================================
 
   async function addTask(task: NewTask): Promise<string> {
     const auth = getAuth();
+
     const firestore = getFirestore();
 
     const currentUser = auth.currentUser;
@@ -176,33 +153,73 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       throw new Error('User is not logged in');
     }
 
+    let firestoreId: string | null = null;
+
     try {
       // ==================================================
-      // 1. SAVE TO FIRESTORE
+      // STEP 1: SAVE TASK UNDER CURRENT USER IN FIRESTORE
       // ==================================================
 
-      console.log('Saving task to Firestore...');
+      console.log('================================');
+      console.log('STEP 1: SAVING TASK TO FIRESTORE');
+      console.log('================================');
 
-      const taskReference = await addDoc(
+      console.log('Firestore path:', `users/${currentUser.uid}/tasks`);
+
+      const firestoreTask = await addDoc(
         collection(firestore, 'users', currentUser.uid, 'tasks'),
         {
-          ...task,
-
           userId: currentUser.uid,
 
+          title: task.title,
+
+          description: task.description,
+
+          dateTime: task.dateTime,
+
+          deadline: task.deadline,
+
+          priority: task.priority,
+
           completed: false,
+
+          createdAt: new Date().toISOString(),
         },
       );
 
-      const firestoreId = taskReference.id;
+      firestoreId = firestoreTask.id;
 
-      console.log('Task saved to Firestore:', firestoreId);
+      console.log('Firestore task created successfully');
+
+      console.log('Firestore ID:', firestoreId);
 
       // ==================================================
-      // 2. SAVE TO MONGODB
+      // STEP 2: SAVE SAME TASK TO MONGODB
       // ==================================================
 
-      console.log('Saving task to MongoDB...');
+      console.log('================================');
+      console.log('STEP 2: SAVING TASK TO MONGODB');
+      console.log('================================');
+
+      const taskData = {
+        userId: currentUser.uid,
+
+        firestoreId: firestoreId,
+
+        title: task.title,
+
+        description: task.description,
+
+        dateTime: task.dateTime,
+
+        deadline: task.deadline,
+
+        priority: task.priority,
+
+        completed: false,
+      };
+
+      console.log('MongoDB task data:', taskData);
 
       const response = await fetch(`${API_URL}/api/tasks`, {
         method: 'POST',
@@ -211,22 +228,12 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
           'Content-Type': 'application/json',
         },
 
-        body: JSON.stringify({
-          ...task,
-
-          userId: currentUser.uid,
-
-          completed: false,
-
-          firestoreId: firestoreId,
-        }),
+        body: JSON.stringify(taskData),
       });
 
-      // --------------------------------------------------
-      // CHECK RESPONSE
-      // --------------------------------------------------
-
       const data = await response.json();
+
+      console.log('MongoDB HTTP status:', response.status);
 
       console.log('MongoDB response:', data);
 
@@ -234,15 +241,90 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         throw new Error(data.message || 'Failed to save task to MongoDB');
       }
 
-      console.log('Task saved to MongoDB successfully:', data.task?._id);
-
       // ==================================================
-      // RETURN FIRESTORE ID
+      // GET MONGODB TASK
       // ==================================================
 
-      return firestoreId;
+      const mongoTask = data.task;
+
+      if (!mongoTask || !mongoTask._id) {
+        throw new Error('MongoDB did not return task ID');
+      }
+
+      const mongoId = mongoTask._id;
+
+      // ==================================================
+      // SUCCESS
+      // ==================================================
+
+      console.log('================================');
+      console.log('TASK SAVED TO BOTH DATABASES');
+      console.log('================================');
+
+      console.log('Firebase User:', currentUser.uid);
+
+      console.log(
+        'Firestore Path:',
+        `users/${currentUser.uid}/tasks/${firestoreId}`,
+      );
+
+      console.log('Firestore ID:', firestoreId);
+
+      console.log('MongoDB ID:', mongoId);
+
+      // ==================================================
+      // UPDATE LOCAL STATE
+      // ==================================================
+
+      const savedTask: Task = {
+        id: mongoId,
+
+        firestoreId: firestoreId,
+
+        userId: currentUser.uid,
+
+        title: task.title,
+
+        description: task.description,
+
+        dateTime: task.dateTime,
+
+        deadline: task.deadline,
+
+        priority: task.priority,
+
+        completed: false,
+      };
+
+      setTasks(previousTasks => [...previousTasks, savedTask]);
+
+      return mongoId;
     } catch (error) {
-      console.log('Add task error:', error);
+      console.log('================================');
+
+      console.log('TASK SAVE FAILED');
+
+      console.log('================================');
+
+      console.log('Error:', error);
+
+      // ==================================================
+      // ROLLBACK FIRESTORE
+      // ==================================================
+
+      if (firestoreId) {
+        try {
+          console.log('MongoDB failed. Removing Firestore task...');
+
+          await deleteDoc(
+            doc(firestore, 'users', currentUser.uid, 'tasks', firestoreId),
+          );
+
+          console.log('Firestore rollback successful');
+        } catch (rollbackError) {
+          console.log('Firestore rollback failed:', rollbackError);
+        }
+      }
 
       throw error;
     }
@@ -250,16 +332,19 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   // ====================================================
   // TOGGLE TASK
+  // MONGODB + FIRESTORE
   // ====================================================
 
   async function toggleTask(id: string): Promise<void> {
     const auth = getAuth();
+
     const firestore = getFirestore();
 
     const currentUser = auth.currentUser;
 
     if (!currentUser) {
       console.log('No logged-in user');
+
       return;
     }
 
@@ -275,24 +360,12 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // ==================================================
-      // 1. UPDATE FIRESTORE
-      // ==================================================
-
-      console.log('Updating Firestore task:', id);
-
-      await updateDoc(doc(firestore, 'users', currentUser.uid, 'tasks', id), {
-        completed: newCompleted,
-      });
-
-      console.log('Firestore task updated:', id);
-
-      // ==================================================
-      // 2. UPDATE MONGODB
+      // UPDATE MONGODB
       // ==================================================
 
       console.log('Updating MongoDB task:', id);
 
-      const response = await fetch(`${API_URL}/api/tasks/firestore/${id}`, {
+      const response = await fetch(`${API_URL}/api/tasks/${id}`, {
         method: 'PUT',
 
         headers: {
@@ -311,13 +384,47 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       console.log('MongoDB update response:', data);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to update task in MongoDB');
+        throw new Error(data.message || 'Failed to update task');
       }
 
-      console.log('MongoDB task updated:', id);
+      // ==================================================
+      // UPDATE FIRESTORE
+      // ==================================================
+
+      if (task.firestoreId) {
+        try {
+          await updateDoc(
+            doc(firestore, 'users', currentUser.uid, 'tasks', task.firestoreId),
+            {
+              completed: newCompleted,
+            },
+          );
+
+          console.log('Firestore task updated:', task.firestoreId);
+        } catch (firestoreError) {
+          console.log('Firestore update error:', firestoreError);
+        }
+      }
 
       // ==================================================
-      // 3. CANCEL NOTIFICATION
+      // UPDATE LOCAL STATE
+      // ==================================================
+
+      setTasks(previousTasks =>
+        previousTasks.map(item =>
+          item.id === id
+            ? {
+                ...item,
+                completed: newCompleted,
+              }
+            : item,
+        ),
+      );
+
+      console.log('Task updated successfully:', id);
+
+      // ==================================================
+      // CANCEL NOTIFICATION
       // ==================================================
 
       if (newCompleted) {
@@ -336,22 +443,33 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   // ====================================================
   // DELETE TASK
+  // MONGODB + FIRESTORE
   // ====================================================
 
   async function deleteTask(id: string): Promise<void> {
     const auth = getAuth();
+
     const firestore = getFirestore();
 
     const currentUser = auth.currentUser;
 
     if (!currentUser) {
       console.log('No logged-in user');
+
+      return;
+    }
+
+    const task = tasks.find(item => item.id === id);
+
+    if (!task) {
+      console.log('Task not found:', id);
+
       return;
     }
 
     try {
       // ==================================================
-      // 1. CANCEL NOTIFICATION
+      // CANCEL NOTIFICATION
       // ==================================================
 
       try {
@@ -363,25 +481,21 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       }
 
       // ==================================================
-      // 2. DELETE FROM FIRESTORE
-      // ==================================================
-
-      await deleteDoc(doc(firestore, 'users', currentUser.uid, 'tasks', id));
-
-      console.log('Task deleted from Firestore:', id);
-
-      // ==================================================
-      // 3. DELETE FROM MONGODB
+      // DELETE FROM MONGODB
       // ==================================================
 
       console.log('Deleting task from MongoDB:', id);
 
       const response = await fetch(
-        `${API_URL}/api/tasks/firestore/${id}?userId=${encodeURIComponent(
+        `${API_URL}/api/tasks/${id}?userId=${encodeURIComponent(
           currentUser.uid,
         )}`,
         {
           method: 'DELETE',
+
+          headers: {
+            'Content-Type': 'application/json',
+          },
         },
       );
 
@@ -390,10 +504,32 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       console.log('MongoDB delete response:', data);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to delete task from MongoDB');
+        throw new Error(data.message || 'Failed to delete task');
       }
 
-      console.log('Task deleted from MongoDB:', id);
+      // ==================================================
+      // DELETE FROM FIRESTORE
+      // ==================================================
+
+      if (task.firestoreId) {
+        try {
+          await deleteDoc(
+            doc(firestore, 'users', currentUser.uid, 'tasks', task.firestoreId),
+          );
+
+          console.log('Firestore task deleted:', task.firestoreId);
+        } catch (firestoreError) {
+          console.log('Firestore delete error:', firestoreError);
+        }
+      }
+
+      // ==================================================
+      // REMOVE FROM LOCAL STATE
+      // ==================================================
+
+      setTasks(previousTasks => previousTasks.filter(item => item.id !== id));
+
+      console.log('Task deleted successfully:', id);
     } catch (error) {
       console.log('Delete task error:', error);
     }
@@ -407,8 +543,11 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     <TaskContext.Provider
       value={{
         tasks,
+
         addTask,
+
         toggleTask,
+
         deleteTask,
       }}
     >

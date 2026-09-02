@@ -81,3 +81,4 @@ android/app/build/
 android/build/
 ios/Pods/
 ios/build/
+.env
